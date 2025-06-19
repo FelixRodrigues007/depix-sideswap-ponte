@@ -9,9 +9,9 @@
  "scripts": {
   "teste": "echo \" Erro: nenhum teste especificado \" && exit 1"
  },
- "dependências": {
-  "axios": "^1.10.0",
-  "ws": "^8.18.2"
+"dependencies": {
+  "ws": "^8.18.2",
+  "axios": "^1.10.0"
  },
  "devDependencies": {
   "axios": "^1.10.0",
