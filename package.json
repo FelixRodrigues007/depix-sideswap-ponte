@@ -1,0 +1,20 @@
+{
+ "nome": "connectws",
+ "versão": "1.0.0",
+ "descrição": "",
+ "licença": "ISC",
+ "autor": "",
+ "tipo": "módulo",
+ "principal": "depix-ws.js",
+ "scripts": {
+  "teste": "echo \" Erro: nenhum teste especificado \" && exit 1"
+ },
+ "dependências": {
+  "axios": "^1.10.0",
+  "ws": "^8.18.2"
+ },
+ "devDependencies": {
+  "axios": "^1.10.0",
+  "ws": "^8.18.2"
+ }
+}
