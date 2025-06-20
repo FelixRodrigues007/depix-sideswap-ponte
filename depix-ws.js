@@ -1,16 +1,8 @@
-// depix.js
 import WebSocket from 'ws';
-import axios from 'axios';
 
 const WS_URL = 'wss://api.sideswap.io/json-rpc-ws';
 const L_BTC_ASSET = '6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d'; // base
 const DEPIX_ASSET = '02f22f8d9c76ab41661a2729e4752e2c5d1a263012141b86ea98af5472df5189'; // quote
-const N8N_WEBHOOK = process.env.N8N_WEBHOOK_URL;
-
-// Validação da variável de ambiente
-if (!N8N_WEBHOOK) {
-  console.warn('⚠️  N8N_WEBHOOK_URL não configurado. Dados não serão enviados para N8N.');
-}
 
 let ws;
 let reconnectAttempts = 0;
@@ -51,7 +43,7 @@ function connectWebSocket() {
       log('info', 'Subscrição enviada', subscribeMessage);
     });
     
-    ws.on('message', async (raw) => {
+    ws.on('message', (raw) => {
       try {
         const rawString = raw.toString();
         log('debug', '<<< Mensagem recebida', { size: rawString.length });
@@ -65,16 +57,6 @@ function connectWebSocket() {
             if (candles.length > 0) {
               const last = candles[candles.length - 1];
               log('info', '[histórico] Último preço', { close: last.close });
-              
-              // Enviar para N8N se configurado
-              if (N8N_WEBHOOK) {
-                await sendToN8N({
-                  pair: 'DePIX/L-BTC',
-                  timestamp: new Date().toISOString(),
-                  close: last.close,
-                  type: 'historical'
-                });
-              }
             }
           }
           
@@ -82,16 +64,6 @@ function connectWebSocket() {
           if (msg.params?.chart_update) {
             const { timestamp, close } = msg.params.chart_update.update;
             log('info', '[tick] Atualização em tempo real', { timestamp, close });
-            
-            // Enviar para N8N
-            if (N8N_WEBHOOK) {
-              await sendToN8N({
-                pair: 'DePIX/L-BTC',
-                timestamp,
-                close,
-                type: 'realtime'
-              });
-            }
           }
         }
       } catch (error) {
@@ -122,42 +94,6 @@ function connectWebSocket() {
     
   } catch (error) {
     log('error', 'Erro ao conectar WebSocket', { error: error.message });
-  }
-}
-
-async function sendToN8N(data) {
-  if (!N8N_WEBHOOK) {
-    log('warn', 'N8N webhook não configurado, pulando envio');
-    return;
-  }
-  
-  try {
-    log('debug', 'Enviando dados para N8N', { url: N8N_WEBHOOK, data });
-    
-    const response = await axios.post(N8N_WEBHOOK, data, {
-      timeout: 5000,
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'depix-ws-client/1.0'
-      }
-    });
-    
-    log('info', 'Dados enviados para N8N com sucesso', { 
-      status: response.status,
-      statusText: response.statusText 
-    });
-  } catch (error) {
-    if (error.code === 'ECONNABORTED') {
-      log('error', 'Timeout ao enviar para N8N', { timeout: '5000ms' });
-    } else if (error.response) {
-      log('error', 'Erro HTTP ao enviar para N8N', {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        data: error.response.data
-      });
-    } else {
-      log('error', 'Erro de rede ao enviar para N8N', { error: error.message });
-    }
   }
 }
 
