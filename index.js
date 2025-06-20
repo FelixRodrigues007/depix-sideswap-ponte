@@ -1,30 +1,53 @@
-import express from 'express';
-import axios from 'axios';
+// index.js
+const express = require('express');
+const WebSocket = require('ws');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
+
+// Altere para o endereço e porta onde o sideswap_manager está rodando
+const SIDESWAP_WS_URL = process.env.SIDESWAP_WS_URL || 'ws://localhost:8080';
+
+// Para armazenar a última cotação recebida
+let lastQuote = null;
+
+// Conecta ao WebSocket do sideswap_manager
+const ws = new WebSocket(SIDESWAP_WS_URL);
+
+ws.on('open', () => {
+  // Envia mensagem para assinar as cotações do par desejado
+  ws.send(JSON.stringify({
+    id: 1,
+    method: "market",
+    params: {
+      chart_sub: {
+        asset_pair: { base: "LBTC", quote: "USDT" }
+      }
+    }
+  }));
+});
+
+ws.on('message', (data) => {
+  // Atualiza última cotação recebida
+  lastQuote = data.toString();
+});
+
+ws.on('error', (err) => {
+  console.error("Erro no WebSocket:", err);
+});
+
+// Rota REST para consultar cotação
+app.get('/instant', (req, res) => {
+  if (!lastQuote) {
+    return res.status(503).json({ error: "Cotação não disponível ainda" });
+  }
+  res.type('json').send(lastQuote);
+});
 
 app.get('/', (req, res) => {
-  res.send('API Ponte Sideswap Instant Online');
+  res.send('SideSwap Ponte API online.');
 });
 
-app.get('/instant', async (req, res) => {
-  const { base, quote, amount } = req.query;
-  if (!base || !quote || !amount) {
-    return res.status(400).json({ error: 'Missing params: base, quote, amount' });
-  }
-  const url = `https://sideswap.io/instant/?base=${encodeURIComponent(base)}&quote=${encodeURIComponent(quote)}&amount=${encodeURIComponent(amount)}`;
-  try {
-    const response = await axios.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-    res.json(response.data);
-  } catch (err) {
-    if (err.response) {
-      return res.status(502).json({ error: 'Erro do proxy', status: err.response.status, body: err.response.data });
-    }
-    res.status(500).json({ error: 'Erro interno', detail: err.message });
-  }
-});
-
-app.listen(PORT, () => {
-  console.log(`Servidor iniciado na porta ${PORT}`);
+app.listen(port, () => {
+  console.log(`Servidor SideSwap Ponte rodando na porta ${port}`);
 });
